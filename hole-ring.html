@@ -4,8 +4,6 @@
 	<title>Hello, world!</title>
 	<!-- include three.js library -->
 	<script src='js/three.js'></script>
-	<script src='js/OBJLoader.js'></script>
-	<script src='js/MTLLoader.js'></script>
 	<!-- include jsartookit -->
 	<script src="jsartoolkit5/artoolkit.min.js"></script>
 	<script src="jsartoolkit5/artoolkit.api.js"></script>
@@ -109,37 +107,38 @@ function initialize()
 
 	// build markerControls
 	markerRoot1 = new THREE.Group();
+	markerRoot1.name = 'marker1';
 	scene.add(markerRoot1);
 	let markerControls1 = new THREEx.ArMarkerControls(arToolkitContext, markerRoot1, {
-		type: 'pattern', patternUrl: "data/hiro.patt",
+		type : 'pattern',
+		patternUrl : "data/hiro.patt",
 	})
 
-	let geometry1 = new THREE.PlaneBufferGeometry(1,1, 4,4);
+	// the inside of the hole
+	let geometry1	= new THREE.CylinderGeometry(1,1, 4, 32,1);
 	let loader = new THREE.TextureLoader();
-	// let texture = loader.load( 'images/earth.jpg', render );
-	let material1 = new THREE.MeshBasicMaterial( { color: 0x0000ff, opacity: 0.5 } );
+	let texture = loader.load( 'images/tiles.jpg', render );
+	texture.wrapS = THREE.RepeatWrapping;
+	texture.wrapT = THREE.RepeatWrapping;
+	texture.repeat.set(4,2);
+	let material1	= new THREE.MeshBasicMaterial({
+		transparent : true,
+		map: texture,
+		side: THREE.BackSide
+	}); 
 	mesh1 = new THREE.Mesh( geometry1, material1 );
-	mesh1.rotation.x = -Math.PI/2;
+	mesh1.position.y = -2;
 	markerRoot1.add( mesh1 );
 	
-	function onProgress(xhr) { console.log( (xhr.loaded / xhr.total * 100) + '% loaded' ); }
-	function onError(xhr) { console.log( 'An error happened' ); }
-	
-	new THREE.MTLLoader()
-		.setPath( 'models/' )
-		.load( 'WoodHouse.mtl', function ( materials ) {
-			materials.preload();
-			new THREE.OBJLoader()
-				.setMaterials( materials )
-				.setPath( 'models/' )
-				.load( 'WoodHouse.obj', function ( group ) {
-					mesh0 = group.children[0];
-					mesh0.material.side = THREE.DoubleSide;
-					mesh0.position.y = 0.25;
-					mesh0.scale.set(0.25,0.25,0.25);
-					markerRoot1.add(mesh0);
-				}, onProgress, onError );
-		});
+	// the invisibility cloak (ring; has circular hole)
+	let geometry0 = new THREE.RingGeometry(1,9, 32);
+	let material0 = new THREE.MeshBasicMaterial({
+		// map: loader.load( 'images/color-grid.png' ), // for testing placement
+		colorWrite: false
+	});
+	let mesh0 = new THREE.Mesh( geometry0, material0 );
+	mesh0.rotation.x = -Math.PI/2;
+	markerRoot1.add(mesh0);	
 }
 
 

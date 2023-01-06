@@ -4,8 +4,6 @@
 	<title>Hello, world!</title>
 	<!-- include three.js library -->
 	<script src='js/three.js'></script>
-	<script src='js/OBJLoader.js'></script>
-	<script src='js/MTLLoader.js'></script>
 	<!-- include jsartookit -->
 	<script src="jsartoolkit5/artoolkit.min.js"></script>
 	<script src="jsartoolkit5/artoolkit.api.js"></script>
@@ -23,6 +21,7 @@
   Based on the AR.js library and examples created by Jerome Etienne: https://github.com/jeromeetienne/AR.js/
 -->
 
+
 <script>
 
 var scene, camera, renderer, clock, deltaTime, totalTime;
@@ -31,7 +30,7 @@ var arToolkitSource, arToolkitContext;
 
 var markerRoot1;
 
-var mesh1;
+var material1, mesh1;
 
 initialize();
 animate();
@@ -39,9 +38,6 @@ animate();
 function initialize()
 {
 	scene = new THREE.Scene();
-
-	let ambientLight = new THREE.AmbientLight( 0xcccccc, 1.0 );
-	scene.add( ambientLight );
 				
 	camera = new THREE.Camera();
 	scene.add(camera);
@@ -111,43 +107,74 @@ function initialize()
 	markerRoot1 = new THREE.Group();
 	scene.add(markerRoot1);
 	let markerControls1 = new THREEx.ArMarkerControls(arToolkitContext, markerRoot1, {
-		type: 'pattern', patternUrl: "data/hiro.patt",
+		type: 'pattern', patternUrl: "data/kanji.patt",
 	})
 
-	let geometry1 = new THREE.PlaneBufferGeometry(1,1, 4,4);
+	////////////////////////////////////////////////////////////
+	// setup scene
+	////////////////////////////////////////////////////////////
+	
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+	
 	let loader = new THREE.TextureLoader();
-	// let texture = loader.load( 'images/earth.jpg', render );
-	let material1 = new THREE.MeshBasicMaterial( { color: 0x0000ff, opacity: 0.5 } );
-	mesh1 = new THREE.Mesh( geometry1, material1 );
-	mesh1.rotation.x = -Math.PI/2;
-	markerRoot1.add( mesh1 );
+		
+	let sceneGroup = new THREE.Group();
+	markerRoot1.add(sceneGroup);
 	
-	function onProgress(xhr) { console.log( (xhr.loaded / xhr.total * 100) + '% loaded' ); }
-	function onError(xhr) { console.log( 'An error happened' ); }
+	let texture = loader.load("images/color-grid.png");
+	// repeat texture
+	texture.wrapS = THREE.RepeatWrapping;
+	texture.wrapT = THREE.RepeatWrapping;
+	texture.repeat.set(8,1);
 	
-	new THREE.MTLLoader()
-		.setPath( 'models/' )
-		.load( 'WoodHouse.mtl', function ( materials ) {
-			materials.preload();
-			new THREE.OBJLoader()
-				.setMaterials( materials )
-				.setPath( 'models/' )
-				.load( 'WoodHouse.obj', function ( group ) {
-					mesh0 = group.children[0];
-					mesh0.material.side = THREE.DoubleSide;
-					mesh0.position.y = 0.25;
-					mesh0.scale.set(0.25,0.25,0.25);
-					markerRoot1.add(mesh0);
-				}, onProgress, onError );
-		});
-}
+	shadowMesh = new THREE.Mesh( 
+		new THREE.TorusKnotGeometry(0.5, 0.2, 128, 16), // new THREE.SphereBufferGeometry(1, 32, 32), 
+		new THREE.MeshLambertMaterial({ map: texture })
+	);
+	shadowMesh.position.y = 1;
+	shadowMesh.castShadow = true;
+	shadowMesh.receiveShadow = true;
+	sceneGroup.add( shadowMesh );
+	
+	let floorGeometry = new THREE.PlaneGeometry( 20,20 );
+	let floorMaterial = new THREE.ShadowMaterial();
+	floorMaterial.opacity = 0.3;
+	let floorMesh = new THREE.Mesh( floorGeometry, floorMaterial );
+	floorMesh.rotation.x = -Math.PI/2;
+	floorMesh.receiveShadow = true;
+	sceneGroup.add( floorMesh );
 
+	
+	let light = new THREE.PointLight( 0xffffff, 1, 100 );
+	light.position.set( 0,4,0 ); // default; light shining from top
+	light.castShadow = true;
+	sceneGroup.add( light );
+	
+	let lightSphere = new THREE.Mesh(
+		new THREE.SphereGeometry(0.1),
+		new THREE.MeshBasicMaterial({
+			color: 0xffffff,
+			transparent: true,
+			opacity: 0.8
+		})
+	);
+	lightSphere.position.copy( light.position );
+	sceneGroup.add( lightSphere );
+	
+	let ambientLight = new THREE.AmbientLight( 0x666666 );
+	sceneGroup.add( ambientLight );
+	// let helper = new THREE.CameraHelper( light.shadow.camera );
+	// sceneGroup.add( helper );
+}
 
 function update()
 {
 	// update artoolkit on every frame
 	if ( arToolkitSource.ready !== false )
 		arToolkitContext.update( arToolkitSource.domElement );
+		
+	shadowMesh.rotation.y -= 0.01;
 }
 
 
